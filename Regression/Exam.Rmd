@@ -1,0 +1,567 @@
+---
+title: "Exam Regression 2021, solution"
+author: "Exam number: 123"
+output: knitr:::html_vignette
+---
+
+```{r echo = FALSE, warning = FALSE}
+knitr::opts_chunk$set(background=c(0.97, 0.97, 0.97), tidy=FALSE, cache=TRUE, fig.align='center')
+options(width = 65, show.signif.stars = FALSE)
+library(ggplot2)   ## Grammar of graphics
+library(reshape2)  ## Reshaping data frames
+library(lattice)   ## More graphics
+library(hexbin)    ## and more graphics
+library(gridExtra) ## ... and more graphics
+library(xtable)    ## LaTeX formatting of tables
+library(splines)   ## Splines -- surprise :-)
+library(survival)  ## Survival analysis
+library(grid)      ## For 'unit'
+library(lpSolve)   ## Linear programming
+library(Matrix)
+library(printr)
+```
+
+
+
+## Problem 1
+
+The negative binomial distribution on $\{0,1,2, \ldots\}$ has probability distribution given by the
+point probabilities 
+$$f_{p}(y) = {y+r-1 \choose y} (1-p)^r p^y $$
+for $r > 0$ and $p \in (0,1)$. In the following, $r$ is a fixed nuisance parameter. 
+
+### Question 1 
+Show that the family of probability distributions given
+by $f_{p}$ for $p \in (0, 1)$ is an exponential
+family. Find the structure measure $\nu$, the canonical parameter $\theta (p, r)$ and the unit cumulant function $\kappa(\theta)$.
+
+### Answer 1
+$$\begin{align*}
+f_{p}(y) &= {y+r-1 \choose y} (1-p)^r p^y \\
+&= {y+r-1 \choose y} e^{\log (1-p)^r p^y} \\
+&= {y+r-1 \choose y} e^{r\log(1-p)+y\log p}
+\end{align*}$$
+$$\theta (p, r) = \log p \Longrightarrow p = e^\theta$$
+$$\kappa(\theta) = -r\log(1-p) = -r\log(1-e^\theta)$$
+w.r.t the counting measure $\tau$,
+$$\dfrac{dv}{d\tau}={y+r-1 \choose y}\Longrightarrow v = \tau{y+r-1 \choose y}$$
+the canonical parameter $\theta (p, r) = \log p$, 
+the unit cumulant function $\kappa(\theta) = -r\log(1-e^\theta)$.
+
+### Question 2 
+Compute the mean value function $\mu(\theta)$ and show that the variance function is 
+$$\mathcal{V}(\mu) = \mu \left ( 1 + \frac{\mu}{r} \right ). $$ 
+
+### Answer 2
+$$\begin{align*}
+\mu(\theta)&=\kappa'(\theta)=\dfrac{re^\theta}{1-e^\theta}\\
+\mu(\theta)&=\dfrac{re^\theta}{1-e^\theta}\Longrightarrow \theta=\log\dfrac{\mu}{\mu+r}
+\end{align*}$$
+$$\begin{align*}
+\mathcal{V}(\mu)=\dfrac{\mu'}{\theta'}
+&=\dfrac{\mu'}{(\log\dfrac{\mu}{\mu+r})'}\\
+&=\dfrac{1}{\dfrac{\mu+r}{\mu}\cdot(\dfrac{\mu}{\mu+r})'}\\
+&=\dfrac{1}{\dfrac{\mu+r}{\mu}\cdot\dfrac{r}{(\mu+r)^2}}\\
+&=\dfrac{\mu(\mu+r)}{r}=\mu(1+\dfrac{\mu}{r})
+\end{align*}$$
+
+### Question 3 
+Compute the canonical link function. 
+
+### Answer 3
+By Definition 5.12 on page 121,
+$$g=(\kappa')^{-1}$$
+By Qustion3.2, we know that
+$$\mu=\kappa'(\theta)=\dfrac{re^\theta}{1-e^\theta}\Longrightarrow\theta=\log\dfrac{\mu}{\mu+r}$$
+Thus, we can get
+$$g(\mu)=\log\dfrac{\mu}{\mu+r}$$
+
+### Question 4 
+Usually, it is not the canonical link function that is used when using the negative binomial distribution in a generalized linear model, but the link function $\log (\mu(\eta))$, where $\eta$ is the linear predictor. Find the function $\theta (\eta)$ for the log link function.
+
+
+
+### Answer 4
+By page 122 on book, link function
+$$g(\mu)=\eta$$
+Then, we can get
+$$\begin{align*}
+g(\mu):\log(\mu)&=\eta\\
+\log(\dfrac{re^\theta}{1-e^\theta})&=\eta\\
+\dfrac{re^\theta}{1-e^\theta}&=e^{\eta}\\
+e^\theta&=\frac{e^\eta}{r+e^\eta}\\
+\theta(\eta)&=\log(\frac{e^\eta}{r+e^\eta})
+\end{align*}
+$$
+
+### Question 5 
+The negative binomial distribution can be considered a generalization of the Poisson distribution, allowing for overdispersion, i.e., where the variance is larger than the mean by a factor $(1+\mu/r)>1$. Notice that it is more flexible, since it has a parameter more.  
+
+Keep the mean $\mu$ fixed and let $r \rightarrow \infty$. Notice that in this case the variance converges to $\mu$, the variance function of the Poisson distribution. Find $p$ as a function of $\mu$ and $r$. Express the point probabilities of the negative binomial distribution parametrized by $\mu$ and $r$; $f_{p}(y) \rightarrow f_{\mu} (y; r)$. 
+
+
+### Answer 5
+From above questions, we know that $p=e^\theta$, $\theta=\log\dfrac{\mu}{\mu+r}$. Now, we can get
+$$p=e^{\log\dfrac{\mu}{\mu+r}}=\dfrac{\mu}{\mu+r}$$
+$$\begin{align*}
+f_{p}(y) &= {y+r-1 \choose y} (1-p)^r p^y \\
+&={y+r-1 \choose y} (1-\dfrac{\mu}{\mu+r})^r (\dfrac{\mu}{\mu+r})^y\\
+&={y+r-1 \choose y} (\dfrac{r}{\mu+r})^r (\dfrac{\mu}{\mu+r})^y=f_{\mu} (y; r)
+\end{align*}$$
+We get $f_{\mu} (y; r)={y+r-1 \choose y} (\dfrac{r}{\mu+r})^r (\dfrac{\mu}{\mu+r})^y$
+
+### Question 6 
+Show that 
+$$\lim_{r \rightarrow \infty} f_{\mu} (y; r) = f_{\mu} (y)$$
+where $f_{\mu} (y)$ is the probability function of the Poisson distribution.
+
+
+### Answer 6
+From Question1.5, we know that
+$$
+\begin{align*}
+f_\mu(y;r)&={y+r-1 \choose y}(\dfrac{r}{r+\mu})^r(\dfrac{\mu}{r+\mu})^y\\
+&=\dfrac{(y+r-1)!}{y!(r-1)!}(\dfrac{r}{r+\mu})^r(\dfrac{\mu}{r+\mu})^y\\
+&=\dfrac{(y+r-1)!}{(r-1)!}\dfrac{r^r}{(r+\mu)^{r+y}}\cdot\dfrac{\mu^y}{y!}\\
+&=\dfrac{(y+r+1)!}{(r-1)!}\cdot\dfrac{1}{(r+\mu)^y}\cdot(\dfrac{r}{r+\mu})^r\cdot\dfrac{\mu^y}{y!}\\
+&=\dfrac{(y+r+1)!}{(r-1)!(r+\mu)^y}\cdot(1-\dfrac{\mu}{r+\mu})^r\cdot\dfrac{\mu^y}{y!}
+\end{align*}
+$$
+when $r \rightarrow \infty$, for the first term $\dfrac{(y+r+1)!}{(r-1)!(r+\mu)^y}\rightarrow1$, the second term $(1-\dfrac{\mu}{r+\mu})^r\rightarrow e^{-\mu}$.
+Thus, $\lim_{r \rightarrow \infty} f_{\mu} (y; r) = e^{-\mu}\dfrac{\mu^y}{y!}= f_{\mu} (y)$
+
+### Question 7 
+The negative binomial distribution also arises as a mixture of Poisson distributions as follows. Assume that $Y$ follows a Poisson distribution with mean $\mu$, where the mean $\mu$ of the Poisson distribution is not a constant, but a random variable, following a gamma distribution with shape parameter $r$ and rate parameter $\beta = (1-p)/p$,
+$$\mu \sim \Gamma (r,\beta); \quad f_{\Gamma}(\mu) = \frac{\beta^r}{\Gamma(\alpha)} \mu^{r-1} e^{-\beta \mu}.$$
+Show that this is indeed true by computing the marginal distribution $g(y)$ of $Y$ by integrating the Poisson distribution with respect to the density of $\mu$, obtaining the marginal point probabilities of $Y$ with parameters $r$ and $\beta$, and substitute $\beta$ with $(1-p)/p$. 
+
+
+### Answer 7
+
+
+## Problem 2
+
+This problem is about predicting the probability of minks dying during the month of July due to a certain urinary tract disorder at different mink farms in Denmark. The hypothesis is that the size of the mink is associated with the number of deaths.
+
+The variables are
+
+* Farm identifier (Farm)
+* Number of animals on 20 mink farms on July 1st (Total)
+* Number of deaths in the month of July as a result of a urinary tract disorder (UTD)
+* A continuous variable measuring the average size of the animals / puppies on the farm when they are 95 days old (x)
+* The proportion of mink that died from UTD,  (p = UTD/Total)
+
+The data set is kindly provided by Karin Mundbjerg.
+
+The data is given in the R-code and figure below (the file mink.txt has to be downloaded to the working environment before running the code). 
+
+
+
+```{r data1, fig.width=6, fig.height=3}
+data.mink <- read.table("mink.txt", header = T, sep = "\t")
+data.mink$p <- data.mink$UTD / data.mink$Total
+data.mink
+
+ggplot(data = data.mink, aes(x = x, y = p, size = Total)) +
+  geom_point()
+
+```
+
+The objective is to test if there is an association between average size within farms of the animals and risk of dying from UTD.
+
+### Question 1
+
+There is one missing value of the covariate x. Show that the predicted value of this missing covariate is 1378.57 in a linear regression of x on Total. Substitute (impute) the missing covariate with this value for all subsequent analyses.
+
+### Answer 1
+```{r eq1, fig.width=6, fig.height=3}
+idx <- is.na(data.mink$x)
+xlm <- lm(x ~ Total, data = data.mink)
+pre <- sum(xlm$coefficients*c(1,data.mink$Total[idx])) 
+pre
+data.mink$x[idx] <- pre
+```
+
+### Question 2
+Discuss if this imputation is a reasonable choice.
+
+### Answer 2
+For how to deal with missing value, we should look at whether the missing value is related to the actual value. For MCAR, which is unrelated to the entire $X$ and for MAR, which is unrelated to the variable in $X$, we think impution might be a choice. Now we can see that the missing $x$ is the average size of the animals on farm18. It seems that the $x$ is unrelated to animals' size on the other farm. At least it doesn't seem to be strongly related. So, it might could be imputed. One the other hand, we only have 20 observations. If we remove the farm18, the data will be smaller. In summary, I think it could impute the missing value.
+
+### Question 3
+Fit and report a normal linear regression model of proportion of deaths p on size x. Give an interpretation of the $\beta$ parameters. Discuss the linear model as a choice for modeling probabilities. Evaluate if there is an association between size and death. Discuss the results.
+
+### Answer 3
+```{r eq2, fig.width=6, fig.height=3}
+plm <- glm(p ~ x, data = data.mink)
+summary(plm)
+```
+The result provide that the estimator of $\beta$ is 2.282e-02. It means that, if the average size of the 95-day animals is 0, the proportion of mink that died from UTD on July will be 2.3%. We can see that the $p-value$ of $x$ is 0.0835, which means that $x$ and $p$ are not strongly correlated.It is not significant. This model might not be a good choice. We can see that the in the test, the estimate of $x$ is -1.416e-05, which means that if the average size increass 1, the proportion of died from UTD will decrease 1.416e-05. It is understandable that, the bigger size always present a health body.
+
+### Question 4
+To take into account that the proportion of deaths p is estimated on the basis of different totals, and therefore the variances of these estimates are larger on farms with fewer animals, and smaller on larger farms, the linear regression could be fitted using a weighted regression, using Total as weight. Perform this regression and discuss the results in relation to the unweighted regression. 
+
+*Hint:* The weighted regression is described in Chapter 2, in the Section starting on page 39. In lm or glm calls, this is done by adding weights = Total inside the call.
+
+### Answer 4
+```{r eq3, fig.width=6, fig.height=3}
+plmWgt <- glm(p~x, data = data.mink, weights = Total)
+summary(plmWgt)
+```
+
+Due to the variance, we add a weight to get a better model. After add weights, the $p-value$ of $x$ become smaller, but still not good. We find that the AIC of the weighted model is smaller than original linear model. It means the weighted model is better than normal linear model.
+
+### Question 5
+Analyze the same problem with a logistic regression model. Discuss the results.
+
+*Hint:* The response is now UTD, with $n$ in the binomial being Total.
+
+### Answer 5
+```{r eq4, fig.width=6, fig.height=3}
+Ymat <- cbind(data.mink$UTD, data.mink$Total-data.mink$UTD)
+UTDlgt <- glm(Ymat~x, data = data.mink, family = binomial(link = "logit"))
+summary(UTDlgt)
+UTDlgtWgt <- glm(Ymat~x, data = data.mink, family = binomial(link = "logit"), weights = Total)
+summary(UTDlgtWgt)
+```
+
+The test shows that, for the first model(unweighted), $p-value$ of $x$ is 2.45e-09. It means that the $x$ is significant. $x$ is strongly correlated with $UTD$. Also, we add a weight on this model. It shows that both intercept and $x$ have a very small $p-value$. However, the AIC of this weighted model is so large. It is worse than unweighted. For logistic model, we may not need to add the weight. We use $UTD$ and $Total$ as response, it is different with we use $p$ as response. Thus, for following analysis, we only consider model without weight.
+
+Now, we report the estimate and 95% CI for the slope parameter
+
+```{r CI1, fig.width=6, fig.height=3}
+CIlogit   <- confint.default(UTDlgt)
+UTDlogit <- coef(UTDlgt)
+ORlogit   <- exp(UTDlogit)
+CIORlogit <- exp(CIlogit)
+CI.logit.beta <- matrix(cbind(UTDlogit, CIlogit)[2,],
+                   ncol = 3, byrow = TRUE)
+dimnames(CI.logit.beta) <- list(c("beta"), c("estimate", "lower", "upper"))
+CI.logit.OR <- matrix(cbind(ORlogit, CIORlogit)[2,],
+                   ncol = 3, byrow = TRUE)
+dimnames(CI.logit.OR) <- list(c("OR"), c("estimate", "lower", "upper"))
+library(knitr)
+kable(CI.logit.beta)
+```
+
+```{r CI2, fig.width=6, fig.height=3}
+kable(CI.logit.OR)
+```
+
+### Question 6
+Repeat for a Poisson regression model.
+
+*Hint:* The response is now UTD, with log(Total) as offset.
+
+### Answer 6
+```{r eq5, fig.width=6, fig.height=3}
+UTDPos <- glm(UTD ~ x, family = poisson(), data = data.mink, offset = log(Total))
+summary(UTDPos)
+```
+It shows that the $x$ is strongly significant by very small $p-value$. And AIC is 239.85 is better than the AIC from logistic model 240.24. But there is only a small difference, we cannot make a conclusion which is better by it.
+
+### Question 7
+Repeat for the Negative Binomial model.
+
+*Hint:*  The negative binomial model can be fitted with glm.nb in the Mass package. The response is UTD with log(Total) as offset. The family should not be provided (it is implicit by calling glm.nb). Likewise for the link function: The default and appropriate link function is log. 
+
+### Answer 7
+```{r eq6, fig.width=6, fig.height=3}
+library(MASS)
+UTDnb <- glm.nb(UTD ~ x + offset(log(Total)), data = data.mink)
+summary(UTDnb)
+```
+
+From $p-value$, we see that $x$ is not so significant. That means $x$ and $UTD$ are not strongly correlated in this model. The estimate of $x$ is -0.003525 means, if animals' average size increase one unit, the number of deaths by UTD in July will decrease 0.003525. And from AIC, it shows that this model is better than logist and Poisson.
+
+### Question 8
+Interpret the negative binomial model with respect to mink farms, using question 1.7 from the previous problem, explaining the overdispersion in the Poisson model for this data set. 
+
+*Hint:* Mink farms might differ more than what can be explained by the covariate x. The estimate of theta provided in the summary output from a fitted object from glm.nb is equal to the parameter $r$ in Problem 1.
+
+### Answer 8
+
+### Question 9
+Make a table with the $p$-values from each of the above models for the effect of x on dying. Discuss the results.
+
+### Answer 9
+
+|  | Intercept | $x$ |
+| :----: | :----: | :----: |
+|  lm   |  0.0452 | 0.0835 |
+|  weighted lm  |  0.0350 | 0.0685 |
+|  logit  |  0.441 | 2.45e-09 |
+|  Poisson  |  0.428 | 2.57e-09 |
+|  glm.nb  |  0.7232 | 0.0564 |
+$x$ from normal linear model, weighted linear model and negative binomial model are not significant. It means that , in these models, $x$ is not strongly related with $UTD$. The size of the animals doesn't effect dead by UTD too much. On the other hand, the size of animal have strongly effect in Poisson model and logistic model. We can see that the $p-value$ of $x$ in these two models are both nearly 2.5e-09. It means $x$ strongly correlate with $UTD$.
+
+In conclusion, the average size of animal in normal linear model, weighted linear model and negative binomial model doesn't effect the dead strongly. However in logist model and Poisson model, it is totally different. Animals' size and dead are correlated.
+
+### Question 10
+Make a table with the estimated probabilities of dying given x = 1400 and Total = 15000 for each of the models together with 95\% confidence intervals. Discuss similarities and differences between the main conclusions of the models. 
+
+### Answer 10
+```{r eq7, fig.width=6, fig.height=3}
+parset <- list(x = 1400, Total = 15000)
+preds <- predict(plm, newdata = parset, type = "response", se.fit = TRUE)
+preds <- predict(plmWgt, newdata = parset, type = "response", se.fit = TRUE)
+preds <- predict(UTDlgt, newdata = parset, type = "response", se.fit = TRUE)
+preds <- predict(UTDPos, newdata = parset, type = "response", se.fit = TRUE)
+preds <- predict(UTDnb, newdata = parset, type = "response", se.fit = TRUE)
+ub <- preds$fit + (1.96 * preds$se.fit)
+lb <- preds$fit - (1.96 * preds$se.fit)
+ 
+```
+|  | estimated prob | CI ub | CI lb |
+| :----: | :----: | :----: | :----: |
+|  lm   |  0.002993884  |0.003926002  |0.002061767 |
+|  weighted lm  |  0.002525178  | 0.003085664  | 0.001964692  |
+|  logit  |  0.0024872  | 0.002666873 | 0.002307527 |
+|  Poisson  |  0.00248712 | 0.002667017 | 0.002307223  |
+|  glm.nb  |  0.00292954 | 0.003577673 |  0.002281407  |
+
+The logistic model and Poisson model have similar results 0.002487 about the estimated probabilities of dying when given $x$ and $Total$. Also, the normal linear model and negative binomial model have a similar estimation at 0.00295. There is a big difference between these two results. Meanwhile, it provides that, normal linear model, weighted linear model and negative binomial model have wider confidence intervals. What we can get is when the average size of animals is 1400, the total death is 15000, the proportion of mink that died from UTD is less than 0.3%.
+
+### Question 11
+Discuss pros and cons of the different models based both on the above discussions as well as more formal model selection tools, such as AIC. *Note:* AIC values cannot be compared across the continuous normal models, and the discrete binomial, poisson and negative binomial models (their likelihoods are defined with respect to either the Lebesgue or the counting measures, and can therefore not be compared), but they can be compared within the two groups of models. 
+
+### Answer 11
+Firstly, we compared normal linear model and weighted linear model. Due to the variance, we perfer to choose the weighted model. For logistic model, Poisson model and negative binomial model, we don't consider the Poisson model, which is overdispersion in this data set. Now, we compared these three models.
+```{r add2, fig.width=6, fig.height=3}
+mintDiag <- fortify(plmWgt)
+grid.arrange(
+qplot(.fitted, .resid, data = mintDiag) +
+  geom_smooth(),
+qplot(sample = .stdresid, data = mintDiag, geom = "qq") +
+  geom_abline(),
+ncol = 2
+)
+
+mintDiag <- fortify(UTDlgt)
+grid.arrange(
+qplot(.fitted, .resid, data = mintDiag) +
+  geom_smooth(),
+qplot(sample = .stdresid, data = mintDiag, geom = "qq") +
+  geom_abline(),
+ncol = 2
+)
+
+mintDiag <- fortify(UTDnb)
+grid.arrange(
+qplot(.fitted, .resid, data = mintDiag) +
+  geom_smooth(),
+qplot(sample = .stdresid, data = mintDiag, geom = "qq") +
+  geom_abline(),
+ncol = 2
+)
+```
+The second figure shows that logistic model does not fit well. The qq plot is totally skew. Compared the first and third figures, the weighted linear model provide a better residual. Also, it is more simple than negative binomial model. Thus, I will choose the weighted linear model.
+
+### Question 12
+Regarding the objective of testing if there is an association between average size within farms of the animals and risk of dying from UTD, what is your final advice/conclusion?
+
+### Answer 12
+From above models, we can see that the average size of animals and dying from UTD have an association. As the average size is larger, the risk of dying from UTD is smaller. The farmer can separately breed minks of different sizes. And focus on the small sized mink on July.
+
+
+## Problem 3
+This problem is on the modeling of survival for 349 patients with the liver disease primary biliary cirrhosis (PBC). A multicenter randomized clinical trial was conducted in six European hospitals. Patients with PBC were randomized to treatment with either Cyclosporin A (CyA) or placebo. The main response variable is failure of medical treatment defined as either death or liver transplantation. Patients were followed from randomization until treatment failure, drop-out or end-of-study.
+
+The dataset pbc can be loaded using the R commands below (the file pbc.txt has to be downloaded to the working environment before running the code). For this problem we will only consider a subset of the variables, so you can ignore all variables except for the six variables described below.
+
+
+```{r data2, fig.width=6, fig.height=3}
+
+pbc <- read.table("pbc.txt",
+                  header=TRUE,
+                  sep = ";",
+                  colClasses =
+                    c("factor","factor","factor","factor","numeric","factor",
+                      "factor","numeric","numeric","numeric","numeric","numeric",
+                      "numeric","numeric","factor"),
+                  na.strings="."
+)
+
+pbc <- pbc[,c("ptno","tment", "age", "bili", "days", "status", "unit" )]
+
+```
+
+The (reduced) data set contains six variables. The response variable is the censored survival time (until death or liver transplantation) days measured in days since randomisation (i.e., since start of treatment), together with the status indicator status (2 = dead, 1 = liver transplantation, 0 = censored). Furthermore, the dataset includes the 
+variables: tment (treatment: 0 = placebo, 1 = CyA), age in years at randomization, bili (bilirubin (micromoles/L)) measured at randomization, and unit (the hospital: 1 = Hvidovre, 2 = London,  3 = Copenhagen, 4 = Barcelona, 5 = Munich, 6 = Lyon). 
+
+The objective is to model the survival as a function of the predictor variables, in particular, it is of interest if there are different effects on survival of the two treatments.
+
+### Question 1
+Make an exploratory analysis of the data set.
+
+### Answer 1
+First we plot marginal distributions of the variables in the data set, then pairwise plots of correlations.
+```{r plot1, fig.width=6, fig.height=3}
+pbc$ptno <- NULL
+
+conVar <- c("days", "age", "bili")
+disVar <- c("tment", "status", "unit")
+
+meltedpbc <- melt(pbc[,conVar])
+p1 <- qplot(value,data = meltedpbc, geom = "histogram",
+      xlab = "", ylab = "") +
+  facet_wrap(~ variable, scales = "free", ncol = 3)
+
+meltedpbc <- melt(pbc[,disVar],id.vars = c())
+p2 <- qplot(value,data = meltedpbc, geom = "bar",
+      xlab = "", ylab = "") +
+  facet_wrap(~ variable, scales = "free", ncol = 3) +
+  theme(axis.title.x = element_text(angle = -30,
+                                    size = 8,hjust = 0,vjust = 1))
+
+grid.arrange(p1, p2, nrow = 2)
+
+```
+```{r plot2, fig.width=6, fig.height=3}
+meltedpbc <- melt(pbc$days)
+qplot(value,data = meltedpbc, geom = "histogram",
+      xlab = "days", ylab = "count") +
+  facet_wrap(~ pbc$status!=0,scales = "free", ncol = 2)
+```
+We can see that $ap$ has a very skewed and nonuniform distribution. $unit$ shows most patients are in London. Label 'True' means the number of patients who had been dead or had liver transplantation. We can see that the number of 'True' is much less than the number of 'False'. From summary of data, we know that nearly 75% of total have censored survival times.
+```{r plot3, fig.width=8, fig.height=4}
+p3 <- splom(pbc[,conVar],
+      upper.panel = panel.hexbinplot,
+      pscale = 0,
+      varname.cex = 0.7,
+      nbins = 15,
+      lower.panel = function(x,y){
+        panel.text(mean(range(x)),mean(range(y)),
+                   round(cor(x,y),digits = 2),
+                   cex = 0.7)
+        }
+)
+
+cp <- cor(data.matrix(na.omit(pbc)), method = "spearman")
+ord <- rev(hclust(as.dist(1 - abs(cp)))$order)
+colPal <- colorRampPalette(c("blue", "yellow"), space = "rgb")(100)
+p4 <- levelplot(cp[ord, ord],
+          xlab = "",
+          ylab = "",
+          col.regions = colPal,
+          at = seq(-1, 1, length.out = 100),
+          colorkey = list(space = "top", labels = list(cex = 1.5)),
+          scales = list(x = list(rot = 45),
+                        y = list(draw = FALSE),
+                        cex = 1.2)
+          )
+grid.arrange(p3, p4, ncol = 2)
+```
+$status$ are correlated with $bili$ and $age$, especially with $bili$. It may means that the use of bilirubin will affect the patient's condition. Also, $unit$ seems only correlated with $bili$. This is also understandable, different hospital will use different doses of medician.
+
+### Question 2 
+Plot the Kaplan-Meier estimates of the survival functions for the two treatments. Plot the Kaplan-Meier estimates of the survival functions for the different hospitals. Discuss the results.
+
+### Answer 2
+```{r plot4, fig.width=6, fig.height=4}
+pbcSurv <- survfit(Surv(days,status != "0") ~ tment,
+                   data = pbc)
+plot(pbcSurv, mark.time = FALSE, conf.int = FALSE,
+     col = c("red","blue"))
+legend(30,1.08, levels(pbc$tment),
+       col = c("red","blue"),
+       lty = 1, bty = "n")
+```
+```{r plot5, fig.width=6, fig.height=4}
+
+pbcSurv <- survfit(Surv(days,status != "0") ~ unit,
+                   data = pbc)
+plot(pbcSurv, mark.time = FALSE, conf.int = FALSE,
+     col = c("red","blue","yellow","black","green","purple"))
+legend(30,1.08, levels(pbc$unit),
+       col = c("red","blue","yellow","black","green","purple"),
+       lty = 1, bty = "n")
+
+```
+Figure one shows the Kaplan-Meier estimates for the two treatments. We can see that whether or not there is treatment has no obvious difference in the survival time of patients. But the blue line is still a bit higher than the red line, it means have Cya is still better than have placebo.
+Figure two shows the Kaplan-Meier estimates for the different hospitals. It suggests that the individuals treated in Copenhagen have a longer survival time than other countries. 
+
+### Question 3 
+From now on we will ignore the variable unit. Fit and report the proportional hazards model, where all predictors (except unit) enter linearly. Construct and report tests for each of the variables in the full model.
+
+### Answer 3
+```{r data anlysis1, fig.width=6, fig.height=3}
+form <- Surv(days, status != "0") ~ tment + age + bili
+pbcCox <- coxph(form, data = pbc)
+summary(pbcCox)
+testtab <- drop1(pbcCox, test = "Chisq")
+ord <- order(testtab[,4][-1]) + 1
+testtab[ord,]
+```
+
+From the test, the $p-value$ of bili is smallest. It suggests that bili is the most relevant variable. Also $age$ is relevant. But the $tment$ shows not that good.
+
+### Question 4 
+Investigate if the proportional hazards assumption is reasonable between the groups defined by treatment. Repeat for bilirubin by defining 4 groups: low, medium low, medium high and high level of bilirubin defined by the quartiles of the observed bilirubin.
+
+### Answer 4
+```{r data anlysis2, fig.width=6, fig.height=3}
+pbc$bil <- cut(pbc$bili,breaks = c(0,quantile(pbc$bili,0.25),quantile(pbc$bili,0.5),quantile(pbc$bili,0.75),max(pbc$bili)),labels = c("low","medium low","medium high","high"))
+
+pbc$bil = factor(pbc$bil,levels(pbc$bil)[c(4,1:3)])
+form <- Surv(days, status != "0") ~ tment + age + bil
+pbcCoxgrp <- coxph(form, data = pbc)
+summary(pbcCoxgrp)
+testtab <- drop1(pbcCoxgrp, test = "Chisq")
+ord <- order(testtab[,4][-1]) + 1
+testtab[ord,]
+```
+
+```{r data anlysis3, fig.width=6, fig.height=3}
+anova(pbcCoxgrp,pbcCox)
+```
+
+From anova, it shows that the second model which is the numerical variable bili is better. Frome the figure in Question3.1, it shows that most of the data of bili are concentrate on the small value. We define bilirubin by 4 groups, most data still in the same group 'low'. In addition, we have added three new parameters to the model.
+
+### Question 5 
+Calculate the Cox-Snell residuals, and make a residual plot of the estimated cumulative hazard function against the Cox-Snell residuals. Discuss the result.
+
+### Answer 5
+```{r data plot6, fig.width=6, fig.height=3}
+w <- predict(pbcCox, type = "risk")
+orddtime <- order(pbc$days)
+stat <- (pbc$status != "0")[orddtime]
+W <- rev(cumsum(w[rev(orddtime)]))
+Lambda <- cumsum(stat/W)
+CSres <- Lambda * w[orddtime]
+ordres <- order(CSres)
+CSres <- CSres[ordres]
+statres <- stat[ordres]
+tmp <- survfit(Surv(CSres,statres) ~ 1,type = "fleming-harrington")
+CumHaz <- -log(tmp$surv)[statres]
+qplot(CSres[statres], CumHaz) +
+  geom_abline(intercept = 0, slope = 1) +
+  geom_point(color = "red") +
+  ylab('Cum. Hazards') + xlab("Cox-Snell residuals")
+```
+The Cox-Snell residuals are mostly used for overall assessment of model fit. It resembles the qq-plot. In our  Cox-Snell residuals plot, it shows the model fit not bad. But there exsit extrem value we can see on the plot.
+
+### Question 6 
+Investigate if nonlinear effects should be 
+included into the model. Choose a model to report.
+
+
+### Answer 6
+There are few observations, so we should not include too many extra parameters. I choosed 2 degrees of freedom for variables.
+```{r data anlysis4, fig.width=6, fig.height=3}
+form <- Surv(days, status !="0") ~ tment + ns(bili,2) + ns(age,2)
+pbcCox2 <- coxph(form,data = pbc)
+summary(pbcCox2)
+```
+
+We can see that the $bili$ still shows significant, but the $age1$ shows not so good. The reason might be most of the data concontrate on age60-70.
+```{r data anlysis5, fig.width=6, fig.height=3}
+anova(pbcCox2,pbcCox)
+```
+
+After anova test, we can see that model 2 shows better, which is the linear model.
+
+
+
+
+
